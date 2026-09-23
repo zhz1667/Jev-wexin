@@ -60,6 +60,22 @@ class KnowledgeActivity : AppCompatActivity() {
         scroll.addView(container)
         setContentView(scroll)
         render()
+        if (savedInstanceState == null) openContactFromIntent()
+    }
+
+    private fun openContactFromIntent() {
+        if (intent?.getBooleanExtra(EXTRA_OPEN_CONTACT, false) != true) return
+        val name = intent?.getStringExtra(EXTRA_CONTACT_NAME).orEmpty().trim()
+        val app = intent?.getStringExtra(EXTRA_CONTACT_APP).orEmpty().trim()
+        tab = 1
+        render()
+        val existing = if (name.isNotBlank()) store.findContact(name, app) else null
+        editContactDialog(
+            existing,
+            finishAfterSave = true,
+            suggestedName = name,
+            suggestedApp = app
+        )
     }
 
     // --------------------------------------------------------------- screens
@@ -223,7 +239,7 @@ class KnowledgeActivity : AppCompatActivity() {
         container.addView(twoButtons("新建联系人", { editContactDialog(null) }, null, null))
         if (contacts.isEmpty()) {
             container.addView(emptyCard(
-                "还没有联系人。也可以在聊天里长按悬浮球，选「把当前会话存为联系人」。"))
+                "还没有联系人。也可以在聊天里长按悬浮球，选「设置当前会话联系人」。"))
             return
         }
         contacts.forEach { container.addView(contactRow(it)) }
@@ -270,10 +286,18 @@ class KnowledgeActivity : AppCompatActivity() {
         return c
     }
 
-    private fun editContactDialog(existing: Contact?) {
+    private fun editContactDialog(
+        existing: Contact?,
+        finishAfterSave: Boolean = false,
+        suggestedName: String = "",
+        suggestedApp: String = ""
+    ) {
         val box = dialogBox()
-        val nameEdit = edit(existing?.name ?: "", "名字，一般就是会话标题")
-        val aliasEdit = edit(existing?.aliases?.joinToString("\n") ?: "", "每行一个，例如另一个 App 里的昵称").apply {
+        val nameEdit = edit(existing?.name ?: KbStore.displayName(suggestedName), "名字，一般就是会话标题")
+        val initialAliases = existing?.aliases ?: if (
+            suggestedName.isNotBlank() && KbStore.displayName(suggestedName) != suggestedName.trim()
+        ) listOf(suggestedName.trim()) else emptyList()
+        val aliasEdit = edit(initialAliases.joinToString("\n"), "每行一个，例如另一个 App 里的昵称").apply {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
             minLines = 3; gravity = Gravity.TOP
         }
@@ -293,17 +317,19 @@ class KnowledgeActivity : AppCompatActivity() {
             .setPositiveButton("保存") { _, _ ->
                 val name = nameEdit.text.toString().trim()
                 if (name.isBlank()) { toast("名字不能空"); return@setPositiveButton }
-                store.saveContact(Contact(
+                val saved = store.saveContact(Contact(
                     id = existing?.id ?: KbStore.newId(),
                     name = name,
                     aliases = aliasEdit.text.toString().split("\n")
                         .map { it.trim() }.filter { it.isNotEmpty() },
-                    apps = existing?.apps ?: emptyList(),
+                    apps = existing?.apps ?: if (suggestedApp.isBlank()) emptyList() else listOf(suggestedApp),
                     relationship = relEdit.text.toString().trim(),
                     notes = notesEdit.text.toString().trim(),
                     autoSummary = existing?.autoSummary ?: ""
                 ))
+                if (!saved) { toast("保存失败，请检查存储空间"); return@setPositiveButton }
                 render()
+                if (finishAfterSave) finish()
             }
             .setNegativeButton("取消", null)
             .show()
@@ -427,5 +453,11 @@ class KnowledgeActivity : AppCompatActivity() {
     private fun round(radius: Int, color: Int, stroke: Boolean = false) = GradientDrawable().apply {
         cornerRadius = radius.toFloat(); setColor(color)
         if (stroke) setStroke(dp(1), accent)
+    }
+
+    companion object {
+        const val EXTRA_OPEN_CONTACT = "extra_open_contact"
+        const val EXTRA_CONTACT_NAME = "extra_contact_name"
+        const val EXTRA_CONTACT_APP = "extra_contact_app"
     }
 }

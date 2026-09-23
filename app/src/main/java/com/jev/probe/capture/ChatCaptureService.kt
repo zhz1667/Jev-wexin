@@ -1,6 +1,7 @@
 package com.jev.probe.capture
 
 import android.accessibilityservice.AccessibilityService
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Rect
 import android.os.Bundle
@@ -12,12 +13,12 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.jev.probe.capture.ocr.MlKitOcr
 import com.jev.probe.capture.ocr.OcrLine
 import com.jev.probe.capture.ocr.ScreenCapture
+import com.jev.probe.KnowledgeActivity
 import com.jev.probe.core.BubbleRect
 import com.jev.probe.core.ChatSnapshot
 import com.jev.probe.core.Msg
 import com.jev.probe.core.Prefs
 import com.jev.probe.core.kb.ContextBuilder
-import com.jev.probe.core.kb.KbStore
 import com.jev.probe.jev.JevClient
 import com.jev.probe.overlay.OverlayController
 import java.util.concurrent.Executors
@@ -89,20 +90,18 @@ open class ChatCaptureService : AccessibilityService() {
         overlay?.onManualAnalyze = {
             currentSnapshot?.let { pendingSnapshot = it; runAnalysis() }
         }
-        // Bubble menu: file the open conversation as a knowledge-base contact.
-        // Contacts are never created automatically — this is the one-tap way in.
-        overlay?.onSaveContact = {
-            val title = currentSnapshot?.title
+        // Bubble menu: open the contact editor with the current conversation
+        // prefilled. The editor is visible even when WeChat's title lookup fails.
+        overlay?.onEditContact = {
+            val title = currentSnapshot?.title?.takeUnless { isTransientTitle(it) }.orEmpty()
             val pkg = activePkg ?: foregroundPkg ?: ""
-            when {
-                title.isNullOrBlank() -> overlay?.toast("当前会话没有标题，存不了")
-                isTransientTitle(title) -> overlay?.toast("当前会话标题还没加载出来，稍后再试")
-                else -> submit {
-                    val msg = try {
-                        KbStore.get(this).saveOrMergeContact(title, pkg)
-                    } catch (e: Exception) { "保存失败：${e.javaClass.simpleName}" }
-                    main.post { overlay?.toast(msg) }
-                }
+            val intent = Intent(this, KnowledgeActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .putExtra(KnowledgeActivity.EXTRA_OPEN_CONTACT, true)
+                .putExtra(KnowledgeActivity.EXTRA_CONTACT_NAME, title)
+                .putExtra(KnowledgeActivity.EXTRA_CONTACT_APP, pkg)
+            runCatching { startActivity(intent) }.onFailure {
+                overlay?.toast("打开联系人编辑失败：${it.javaClass.simpleName}")
             }
         }
         // Bubble menu: one manual screenshot + OCR, for any app at all.
@@ -561,7 +560,7 @@ open class ChatCaptureService : AccessibilityService() {
         // Tear the overlay down and cut its callback so a stale button tap can
         // never call back into this dead instance.
         overlay?.onManualAnalyze = null
-        overlay?.onSaveContact = null
+        overlay?.onEditContact = null
         overlay?.onOcrCapture = null
         overlay?.hide()
         overlay = null

@@ -115,35 +115,6 @@ class KbStore private constructor(context: Context) {
         }
     }
 
-    /**
-     * Create a contact from a conversation title, or fold the title/app into the
-     * one that already matches. Returns a message for the toast.
-     */
-    fun saveOrMergeContact(title: String, app: String): String {
-        val display = displayName(title)
-        if (display.isEmpty()) return "当前会话没有标题，存不了"
-        val existing = findContact(title, app)
-        if (existing == null) {
-            val aliases = if (displayName(title) != title.trim()) listOf(title.trim()) else emptyList()
-            saveContact(Contact(
-                id = newId(),
-                name = display,
-                aliases = aliases,
-                apps = if (app.isBlank()) emptyList() else listOf(app)
-            ))
-            return "已存为联系人「${display}」"
-        }
-        val apps = if (app.isBlank() || existing.apps.contains(app)) existing.apps else existing.apps + app
-        val raw = title.trim()
-        val known = (listOf(existing.name) + existing.aliases).map { normalizeName(it) }
-        val aliases = if (raw.isNotEmpty() && normalizeName(raw) !in known)
-            existing.aliases + raw else existing.aliases
-        if (apps == existing.apps && aliases == existing.aliases)
-            return "联系人「${existing.name}」已存在"
-        saveContact(existing.copy(apps = apps, aliases = aliases))
-        return "已并入联系人「${existing.name}」"
-    }
-
     // ---------------------------------------------------------------- history
 
     /**

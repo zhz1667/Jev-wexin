@@ -49,8 +49,8 @@ class OverlayController(private val ctx: Context) {
 
     var onManualAnalyze: (() -> Unit)? = null
 
-    /** Bubble menu → file the open conversation as a knowledge-base contact. */
-    var onSaveContact: (() -> Unit)? = null
+    /** Bubble menu → open the contact editor for the current conversation. */
+    var onEditContact: (() -> Unit)? = null
 
     /** Bubble menu → one manual screenshot + OCR of whatever app is open. */
     var onOcrCapture: (() -> Unit)? = null
@@ -241,7 +241,7 @@ class OverlayController(private val ctx: Context) {
             layoutParams = FrameLayout.LayoutParams(dp(196), ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(56) }
         }
         menu.addView(menuItem("截屏识别一次") { root?.removeView(menu); onOcrCapture?.invoke() })
-        menu.addView(menuItem("把当前会话存为联系人") { onSaveContact?.invoke(); root?.removeView(menu) })
+        menu.addView(menuItem("设置当前会话联系人") { onEditContact?.invoke(); root?.removeView(menu) })
         menu.addView(menuItem("打开设置") { openSettings(); root?.removeView(menu) })
         menu.addView(menuItem("隐藏助手（本次）") { hide() })
         menu.addView(menuItem("取消") { root?.removeView(menu) })
