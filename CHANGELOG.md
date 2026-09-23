@@ -7,10 +7,13 @@
 **新增**
 - 模型接口新增 OpenCode：判断接口可选 OpenCode Zen，使用 `jev-1.13-free` 和 `/systemone`；回复接口可选 OpenCode Go，默认 `deepseek-v4.1-flash`；视觉接口可选 OpenCode Go 的 `deepseek-v4-flash-vision-exp`。
 - 所有 `opencode.ai` 请求自动带 8 位字母数字 Session ID，并写入 `x-opencode-session`、`x-session-affinity`、`x-client-request-id`、`x-session-id` 四个请求头。
+- 新增“Jev 不可用时仍用回复接口生成候选”开关；未配置判断接口或判断失败时，回复接口仍可生成未排序候选。
+- 视觉接口新增 DeepSeek V4.1 预设，使用 `deepseek-v4.1-flash`，支持 `image_url`。
 
 **修复**
 - 联系人关系现在优先于设置里的全局关系。分析当前会话时，匹配到联系人就使用该联系人的「关系」，只有未匹配到联系人才使用设置里的「默认关系」。
 - 修复“把当前会话存为联系人”点击无反馈的问题；现在打开联系人编辑页并预填当前会话标题，可同时设置关系、备注和别名。
+- 联系人编辑页预填名字时排除“微信”“WeChat”“通讯录”“消息”等应用界面标签。
 
 ## v1.3 — 2026-09-22
 

@@ -37,7 +37,8 @@
   也可走 OpenCode Zen `POST https://opencode.ai/zen/v1/systemone`，model `jev-1.13-free`。
   body 都是 `{model, state, questions}`，答案在 `answers`。OpenCode 回复走
   `https://opencode.ai/zen/go/v1/chat/completions`，默认 `deepseek-v4.1-flash`；
-  视觉走同一路径，默认 `deepseek-v4-flash-vision-exp`。
+  视觉走同一路径，DeepSeek V4.1 使用 `deepseek-v4.1-flash`。
+- `replyWithoutJudge=true` 时允许回复接口独立生成未排序候选；不得因为缺 Jev 判断结果丢弃候选回复。
 - Jev 主训练语言是英文：**题目的 instructions 和 criteria 用英文写，state 里的聊天内容保留中文原文。**
 - 知识库 / 上下文数据在 `filesDir/kb` 下的 JSON 文件（`notes.json` / `contacts.json` / `logs/<contactId>.json`）；`KbStore` 单锁 + 原子写（先写 `.tmp` 再 rename）。`ContextBuilder` 只做 alwaysOn 笔记全带 + 标签/标题包含匹配（不做语义检索、不打分），**不自动建档、历史默认关闭（`contextEnabled=false`）**。
 - 关系解析：匹配到联系人时使用 `Contact.relationship`；未匹配到时才回退到 `Prefs.relationship`（设置页“默认关系”）。不要把全局关系覆盖到已绑定联系人。

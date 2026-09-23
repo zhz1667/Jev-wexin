@@ -220,16 +220,18 @@ class SettingsActivity : AppCompatActivity() {
         val visionModelEdit = edit(prefs.visionModel, Prefs.DEFAULT_VISION_MODEL)
         val visionIdx = when (prefs.visionBaseUrl.trim().trimEnd('/')) {
             Prefs.DEFAULT_VISION_BASE -> 0
-            Prefs.OPENCODE_GO_BASE -> 1
-            Prefs.DASHSCOPE_BASE -> 2
-            else -> 3
+            Prefs.DEEPSEEK_BASE -> 1
+            Prefs.OPENCODE_GO_BASE -> 2
+            Prefs.DASHSCOPE_BASE -> 3
+            else -> 4
         }
         visionCard.addView(pills(
-            listOf("OpenRouter", "OpenCode Go", "通义兼容", "自定义"), visionIdx) { idx ->
+            listOf("OpenRouter", "DeepSeek V4.1", "OpenCode Go", "通义兼容", "自定义"), visionIdx) { idx ->
             when (idx) {
                 0 -> { visionBaseEdit.setText(Prefs.DEFAULT_VISION_BASE); visionModelEdit.setText(Prefs.DEFAULT_VISION_MODEL) }
-                1 -> { visionBaseEdit.setText(Prefs.OPENCODE_GO_BASE); visionModelEdit.setText(Prefs.OPENCODE_GO_VISION_MODEL) }
-                2 -> { visionBaseEdit.setText(Prefs.DASHSCOPE_BASE); visionModelEdit.setText(Prefs.DASHSCOPE_VISION_MODEL) }
+                1 -> { visionBaseEdit.setText(Prefs.DEEPSEEK_BASE); visionModelEdit.setText(Prefs.DEEPSEEK_VISION_MODEL) }
+                2 -> { visionBaseEdit.setText(Prefs.OPENCODE_GO_BASE); visionModelEdit.setText(Prefs.OPENCODE_GO_VISION_MODEL) }
+                3 -> { visionBaseEdit.setText(Prefs.DASHSCOPE_BASE); visionModelEdit.setText(Prefs.DASHSCOPE_VISION_MODEL) }
             }
         })
         visionCard.addView(label("Base URL"))
@@ -241,17 +243,19 @@ class SettingsActivity : AppCompatActivity() {
         val visionResult = resultText()
         visionCard.addView(cardBtn("测试视觉") {
             val visionBase = visionBaseEdit.text.toString().trim()
-            if (!VisionClient.supportsVision(visionBase.ifBlank { Prefs.DEFAULT_VISION_BASE })) {
+            val visionModelRaw = visionModelEdit.text.toString().trim()
+            if (!VisionClient.supportsVision(visionBase.ifBlank { Prefs.DEFAULT_VISION_BASE }, visionModelRaw)) {
                 visionResult.text = GUARD_NO_VISION
                 return@cardBtn
             }
+            val visionModelResolved = visionModelRaw.ifBlank { Prefs.DEFAULT_VISION_MODEL }
             val probe = draftPrefs(SCRATCH_VISION) {
                 judgeKey = judgeKeyEdit.text.toString().trim()
                 replyBaseUrl = replyBaseEdit.text.toString().trim().ifBlank { Prefs.DEFAULT_REPLY_BASE }
                 replyKey = replyKeyEdit.text.toString().trim()
                 visionBaseUrl = visionBase
                 visionKey = visionKeyEdit.text.toString().trim()
-                visionModel = visionModelEdit.text.toString().trim().ifBlank { Prefs.DEFAULT_VISION_MODEL }
+                visionModel = visionModelResolved
             }
             if (probe.effectiveVisionKey().isBlank()) { visionResult.text = "请先填密钥（或填回复/判断接口密钥）"; return@cardBtn }
             visionResult.text = "测试中…"
@@ -286,6 +290,10 @@ class SettingsActivity : AppCompatActivity() {
         card2.addView(wlEdit)
         val autoRow = toggleRow("对方发消息时自动分析", prefs.autoAnalyze)
         card2.addView(autoRow)
+        val replyOnlyRow = toggleRow("Jev 不可用时仍用回复接口生成候选", prefs.replyWithoutJudge)
+        card2.addView(replyOnlyRow)
+        card2.addView(text("未配置判断接口或判断失败时，只显示未排序候选；不显示意图和危险等级。",
+            11f, sub))
 
         // --- OCR 兜底（B 阶段）---
         val ocrFallbackRow = toggleRow("树读不到正文时用 OCR 兜底", prefs.ocrFallback)
@@ -390,6 +398,7 @@ class SettingsActivity : AppCompatActivity() {
             prefs.whitelist = wlEdit.text.toString().split("\n")
                 .map { it.trim() }.filter { it.isNotEmpty() }.toSet()
             prefs.autoAnalyze = (autoRow.tag as? Boolean) ?: true
+            prefs.replyWithoutJudge = (replyOnlyRow.tag as? Boolean) ?: false
             prefs.ocrFallback = (ocrFallbackRow.tag as? Boolean) ?: true
             prefs.ocrAutoAnalyze = (ocrAutoRow.tag as? Boolean) ?: false
             prefs.contextEnabled = (ctxRow.tag as? Boolean) ?: false
@@ -594,9 +603,9 @@ class SettingsActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "JEVASSIST"
 
-        /** DeepSeek's official API has no vision model; say so instead of a 400. */
+        /** Text-only DeepSeek models reject image_url; multimodal V4.1 is allowed. */
         private const val GUARD_NO_VISION =
-            "该接口不支持视觉（DeepSeek 官方没有 image_url），请换 OpenRouter 或通义兼容"
+            "该模型不支持视觉（deepseek-chat / deepseek-reasoner 不接受 image_url）；DeepSeek V4.1 等多模态模型可直接使用"
 
         /** One scratch prefs file per test button; never the real config. */
         private const val SCRATCH_JUDGE = "jev_probe_scratch_judge"

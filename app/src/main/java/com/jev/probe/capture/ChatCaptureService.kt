@@ -23,6 +23,7 @@ import com.jev.probe.jev.JevClient
 import com.jev.probe.overlay.OverlayController
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * The live capture service (registered under a disguised class name so WeChat
@@ -93,7 +94,9 @@ open class ChatCaptureService : AccessibilityService() {
         // Bubble menu: open the contact editor with the current conversation
         // prefilled. The editor is visible even when WeChat's title lookup fails.
         overlay?.onEditContact = {
-            val title = currentSnapshot?.title?.takeUnless { isTransientTitle(it) }.orEmpty()
+            val title = currentSnapshot?.title
+                ?.takeUnless { isTransientTitle(it) || isGenericConversationTitle(it) }
+                .orEmpty()
             val pkg = activePkg ?: foregroundPkg ?: ""
             val intent = Intent(this, KnowledgeActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -242,12 +245,23 @@ open class ChatCaptureService : AccessibilityService() {
     private fun runAnalysis() {
         val snapshot = pendingSnapshot ?: return
         if (analyzing) return
-        if (!prefs.hasKey()) { main.post { overlay?.showError("未设置判断接口密钥，去设置里填") }; return }
+        val hasJudge = prefs.hasKey()
+        val hasReply = prefs.effectiveReplyKey().isNotBlank()
+        if (!hasJudge && !(prefs.replyWithoutJudge && hasReply)) {
+            main.post {
+                overlay?.showError(
+                    if (hasReply) "未设置判断接口密钥；可在设置里开启仅回复模式"
+                    else "未设置判断接口或回复接口密钥，去设置里填"
+                )
+            }
+            return
+        }
         analyzing = true
         main.post { overlay?.showLoading(); overlay?.setNote(snapshot.note) }
         val client = JevClient(prefs)
         val fallbackRel = prefs.relationship
         val pkg = activePkg ?: ""
+        val judgeError = AtomicReference<String?>(null)
         // Knowledge context first (local file reads only, a few ms), then the two
         // network calls in parallel on the pool. A failure here must never stop
         // the analysis — it just means no extra context this round.
@@ -260,25 +274,65 @@ open class ChatCaptureService : AccessibilityService() {
             val rel = ctx?.effectiveRelationship(fallbackRel) ?: fallbackRel
             main.post { overlay?.setContextInfo(ctx?.notes?.size ?: 0, ctx?.history?.size ?: 0) }
 
-            // Judgment is fast (~1s) — show it immediately.
-            submit {
-                val judgment = client.judge(snapshot, rel, ctx)
-                main.post {
-                    if (judgment.error != null) { analyzing = false; overlay?.showError(judgment.error) }
-                    else overlay?.showJudgment(judgment)
+            // Judgment is fast (~1s) — show it immediately when available.
+            if (hasJudge) {
+                submit {
+                    val judgment = client.judge(snapshot, rel, ctx)
+                    main.post {
+                        if (judgment.error != null) {
+                            judgeError.set(judgment.error)
+                            if (!hasReply) {
+                                analyzing = false
+                                overlay?.showError(judgment.error)
+                            } else {
+                                overlay?.setReplyNotice("Jev 判断失败：${judgment.error}")
+                            }
+                        } else {
+                            overlay?.showJudgment(judgment)
+                        }
+                    }
                 }
+            } else {
+                main.post { overlay?.setReplyNotice("未配置 Jev 判断，以下候选未排序") }
             }
-            // Candidate replies are slower (generative + rank) — fill in when ready.
-            submit {
-                var replyError: String? = null
-                val ranked = try { client.draftAndRank(snapshot, rel, ctx) } catch (e: Exception) {
-                    replyError = e.message ?: e.javaClass.simpleName
-                    emptyList()
+
+            // Candidate replies are slower (generative + optional rank).
+            if (hasReply) {
+                submit {
+                    var replyError: String? = null
+                    val attempt = try {
+                        client.draftReplies(snapshot, rel, ctx, rank = hasJudge)
+                    } catch (e: Exception) {
+                        replyError = e.message ?: e.javaClass.simpleName
+                        null
+                    }
+                    main.post {
+                        analyzing = false
+                        if (attempt == null || attempt.replies.isEmpty()) {
+                            val jErr = judgeError.get()
+                            overlay?.showError(
+                                if (jErr != null) {
+                                    "回复接口失败：${replyError ?: "未返回候选"}\n判断接口错误：$jErr"
+                                } else {
+                                    "回复接口失败：${replyError ?: "未返回候选"}"
+                                }
+                            )
+                        } else {
+                            val notice = when {
+                                !attempt.ranked && judgeError.get() != null ->
+                                    "Jev 判断失败，候选未排序：${judgeError.get()}"
+                                judgeError.get() != null ->
+                                    "Jev 判断失败；候选排序仍可用"
+                                !attempt.ranked -> attempt.warning ?: "候选未排序"
+                                else -> null
+                            }
+                            overlay?.setReplyNotice(notice)
+                            overlay?.showReplies(attempt.replies, attempt.warning) { text -> fillInput(text) }
+                        }
+                    }
                 }
-                main.post {
-                    analyzing = false
-                    overlay?.showReplies(ranked, replyError) { text -> fillInput(text) }
-                }
+            } else {
+                main.post { analyzing = false; overlay?.setReplyNotice("未配置回复接口密钥") }
             }
         }
     }

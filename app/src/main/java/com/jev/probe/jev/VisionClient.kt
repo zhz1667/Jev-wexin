@@ -71,8 +71,15 @@ class VisionClient(private val prefs: Prefs) {
             return Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
         }
 
-        /** DeepSeek's official API has no vision model; `image_url` is rejected. */
-        fun supportsVision(baseUrl: String): Boolean =
-            !baseUrl.contains("api.deepseek.com", ignoreCase = true)
+        /**
+         * DeepSeek chat/reasoner text models reject `image_url`; multimodal
+         * models such as `deepseek-v4.1-flash` are allowed.
+         */
+        fun supportsVision(baseUrl: String, model: String = ""): Boolean {
+            if (!baseUrl.contains("api.deepseek.com", ignoreCase = true)) return true
+            val m = model.trim().lowercase()
+            if (m.isBlank()) return false
+            return !(m.contains("deepseek-chat") || m.contains("deepseek-reasoner"))
+        }
     }
 }

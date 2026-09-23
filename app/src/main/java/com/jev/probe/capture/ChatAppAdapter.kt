@@ -29,6 +29,23 @@ interface ChatAppAdapter {
     fun extract(root: AccessibilityNodeInfo, res: Resources): ChatSnapshot?
 }
 
+/** UI labels that are not conversation names. */
+private val GENERIC_CONVERSATION_TITLES = setOf(
+    "微信", "wechat", "通讯录", "发现", "朋友圈", "我",
+    "qq", "消息", "联系人",
+    "x", "twitter", "私信", "messages",
+    "飞书", "lark"
+)
+
+internal fun cleanConversationTitle(t: String?): String? {
+    val s = t?.trim().orEmpty()
+    if (s.isEmpty()) return null
+    return s.takeUnless { GENERIC_CONVERSATION_TITLES.contains(it.lowercase()) }
+}
+
+internal fun isGenericConversationTitle(t: String?): Boolean =
+    cleanConversationTitle(t) == null
+
 /** Shared helpers. */
 private fun looksLikeTimestamp(t: String): Boolean =
     Regex("""\d{1,2}[:：]\d{2}""").containsMatchIn(t) ||
@@ -70,7 +87,7 @@ internal fun findTitleInActionBar(
         }
         for (i in node.childCount - 1 downTo 0) node.getChild(i)?.let { stack.addLast(it) }
     }
-    return best
+    return cleanConversationTitle(best)
 }
 
 /** Chinese sentence punctuation — a real message/announcement line has it, a
@@ -124,7 +141,7 @@ internal fun findWeChatTitle(
         }
         for (i in node.childCount - 1 downTo 0) node.getChild(i)?.let { stack.addLast(it) }
     }
-    return bestCounted ?: bestPlain
+    return cleanConversationTitle(bestCounted ?: bestPlain)
 }
 
 /** WeChat (com.tencent.mm). Message bubbles carry a stable id; sender side is
@@ -219,7 +236,7 @@ class QQAdapter : ChatAppAdapter {
                 if (b.top < firstBubbleTop) firstBubbleTop = b.top
             }
             if (!hasInput && id == INPUT_ID) hasInput = true
-            if (id == TITLE_ID && title == null) text?.let { if (it.isNotBlank()) title = it }
+            if (id == TITLE_ID && title == null) title = cleanConversationTitle(text)
             for (i in node.childCount - 1 downTo 0) node.getChild(i)?.let { stack.addLast(it) }
         }
         if (bubbles.isEmpty() && !hasInput) return null
@@ -340,7 +357,9 @@ class FeishuAdapter : ChatAppAdapter {
             val id = node.viewIdResourceName ?: ""
             if (id.endsWith(":id/message") || id.endsWith(":id/bubble_content_container") ||
                 id.endsWith(":id/kb_rich_text_content")) isChat = true
-            if (id.endsWith(":id/group_name")) node.text?.toString()?.let { if (title == null) title = it }
+            if (id.endsWith(":id/group_name") && title == null) {
+                title = cleanConversationTitle(node.text?.toString())
+            }
 
             val text = node.text?.toString()
             val cls = node.className?.toString()

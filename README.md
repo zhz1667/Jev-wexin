@@ -114,15 +114,18 @@
 
 客户端会拼接 `/chat/completions`。
 
+如果暂时没有配置 Jev，或者 Jev 请求失败，可以在设置中开启“Jev 不可用时仍用回复接口生成候选”。开启后回复接口会继续生成 3 条候选，但不提供意图、危险等级和 Jev 排序，面板会明确标注“未排序”。
+
 ### 5.3 视觉接口
 
 | 预设 | Base URL | 默认模型 | 说明 |
 |---|---|---|---|
 | OpenRouter | `https://openrouter.ai/api/v1` | `qwen/qwen2.5-vl-72b-instruct` | 支持 `image_url` |
-| OpenCode Go | `https://opencode.ai/zen/go/v1` | `deepseek-v4-flash-vision-exp` | 支持 `image_url` |
+| DeepSeek V4.1 | `https://api.deepseek.com/v1` | `deepseek-v4.1-flash` | 支持 `image_url` |
+| OpenCode Go | `https://opencode.ai/zen/go/v1` | `deepseek-v4.1-flash` | 支持 `image_url` |
 | 通义兼容 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-vl-max` | 支持 `image_url` |
 
-DeepSeek 官方不支持 `image_url`，因此没有视觉预设。
+DeepSeek 的 `deepseek-chat` / `deepseek-reasoner` 是文本模型，不接受 `image_url`；`deepseek-v4.1-flash` 支持多模态图片输入。
 
 ### 5.4 密钥继承
 
@@ -202,6 +205,7 @@ Debug 包和 release 包签名不同，不能相互覆盖安装；切换前需�
 3. 回复和视觉可以留空继承密钥；地址和模型需要按供应商选择。
 4. 每张卡都可以单独点击“测试判断”“测试回复”“测试视觉”。
 5. 如果使用 OpenCode，判断选 OpenCode Zen，回复和视觉选 OpenCode Go，只填一把 OpenCode Key 即可。
+6. 如果暂时不配置 Jev，开启“Jev 不可用时仍用回复接口生成候选”，即可只使用回复接口。
 
 ### 7.4 悬浮窗操作
 

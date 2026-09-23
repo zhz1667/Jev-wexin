@@ -104,6 +104,14 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         get() = sp.getString(K_REPLY_MODEL, DEFAULT_REPLY_MODEL) ?: DEFAULT_REPLY_MODEL
         set(v) = sp.edit().putString(K_REPLY_MODEL, v.trim()).apply()
 
+    /**
+     * When true, the reply route still runs without a configured/working Jev
+     * judge route. Candidates are returned unranked and without judgments.
+     */
+    var replyWithoutJudge: Boolean
+        get() = sp.getBoolean(K_REPLY_WITHOUT_JUDGE, false)
+        set(v) = sp.edit().putBoolean(K_REPLY_WITHOUT_JUDGE, v).apply()
+
     // --------------------------------------------------------------- vision
 
     /**
@@ -261,6 +269,7 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         private const val K_REPLY_BASE = "reply_base_url"
         private const val K_REPLY_KEY = "reply_key"
         private const val K_REPLY_MODEL = "reply_model"
+        private const val K_REPLY_WITHOUT_JUDGE = "reply_without_judge"
         private const val K_VISION_BASE = "vision_base_url"
         private const val K_VISION_KEY = "vision_key"
         private const val K_VISION_MODEL = "vision_model"
@@ -302,6 +311,7 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         const val DEFAULT_REPLY_MODEL = "deepseek/deepseek-chat-v3.1"
         const val DEEPSEEK_BASE = "https://api.deepseek.com/v1"
         const val DEEPSEEK_MODEL = "deepseek-chat"
+        const val DEEPSEEK_VISION_MODEL = "deepseek-v4.1-flash"
         const val OPENCODE_GO_BASE = "https://opencode.ai/zen/go/v1"
         const val OPENCODE_GO_MODEL = "deepseek-v4.1-flash"
         const val DASHSCOPE_BASE = "https://dashscope.aliyuncs.com/compatible-mode/v1"
@@ -310,7 +320,7 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         // Vision route preset (OpenRouter region-available; user may change).
         const val DEFAULT_VISION_BASE = "https://openrouter.ai/api/v1"
         const val DEFAULT_VISION_MODEL = "qwen/qwen2.5-vl-72b-instruct"
-        const val OPENCODE_GO_VISION_MODEL = "deepseek-v4-flash-vision-exp"
+        const val OPENCODE_GO_VISION_MODEL = "deepseek-v4.1-flash"
         const val DASHSCOPE_VISION_MODEL = "qwen-vl-max"
 
         const val DEFAULT_REL = "对方是我的伴侣；from=me 的是我发的，from=other 的是对方发的"

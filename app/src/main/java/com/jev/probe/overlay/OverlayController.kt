@@ -71,6 +71,7 @@ class OverlayController(private val ctx: Context) {
     /** Set when [showReplies] was handed a draftAndRank failure, so the panel
      *  can say so instead of silently showing "（未生成候选回复）". */
     private var replyError: String? = null
+    private var replyNotice: String? = null
 
     private fun dp(v: Int) = TypedValue.applyDimension(
         TypedValue.COMPLEX_UNIT_DIP, v.toFloat(), ctx.resources.displayMetrics).roundToInt()
@@ -310,6 +311,7 @@ class OverlayController(private val ctx: Context) {
         lastFill = null
         noteText = null
         replyError = null
+        replyNotice = null
         contentBox?.removeAllViews()
     }
 
@@ -326,7 +328,10 @@ class OverlayController(private val ctx: Context) {
     fun showLoading() {
         ensureRoot(); bubble?.alpha = 1f
         ctxNotes = 0; ctxHistory = 0   // counts for the round that is starting
+        lastJudgment = null
+        lastFill = null
         replyError = null              // this round has not failed (yet)
+        replyNotice = null
         setContent(listOf(hint("分析中…")))
         if (!expanded) toggle()
     }
@@ -357,16 +362,28 @@ class OverlayController(private val ctx: Context) {
     }
 
     fun showJudgment(a: Analysis) {
-        lastJudgment = a
-        render(a, generating = true)
+        val existing = lastJudgment?.rankedReplies.orEmpty()
+        val merged = if (existing.isNotEmpty()) a.copy(rankedReplies = existing) else a
+        lastJudgment = merged
+        render(merged, generating = existing.isEmpty())
     }
 
     fun showReplies(ranked: List<RankedReply>, error: String? = null, onFill: (String) -> Unit) {
         lastFill = onFill
         replyError = error
-        val a = lastJudgment?.copy(rankedReplies = ranked) ?: return
+        val base = lastJudgment ?: Analysis(
+            null, null, null, null, null, null, null, emptyList(), 0L
+        )
+        val a = base.copy(rankedReplies = ranked)
         lastJudgment = a
         render(a, generating = false)
+    }
+
+    /** Update the per-round caveat without dropping already-rendered replies. */
+    fun setReplyNotice(msg: String?) {
+        replyNotice = msg
+        val a = lastJudgment ?: return
+        if ((contentBox?.childCount ?: 0) > 0) render(a, generating = false)
     }
 
     fun toast(msg: String) = Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show()
@@ -417,13 +434,15 @@ class OverlayController(private val ctx: Context) {
         a.tensionResolved?.let { if (it >= 0.7) views.add(line("✓ 紧张已缓解", "#16A34A", 12f)) }
 
         views.add(divider())
-        views.add(line("候选回复（Jev 排序）", "#9CA3AF", 12f))
+        val ranked = a.rankedReplies.any { it.ranked }
+        views.add(line(if (ranked) "候选回复（Jev 排序）" else "候选回复（未排序）", "#9CA3AF", 12f))
+        replyNotice?.takeIf { it.isNotBlank() }?.let { views.add(hint(it)) }
         if (generating) {
             views.add(hint("生成中…"))
         } else {
             val fill = lastFill ?: {}
             a.rankedReplies.forEachIndexed { i, r ->
-                views.add(replyCard(i + 1, r.text, (r.prob * 100).roundToInt(), fill))
+                views.add(replyCard(i + 1, r.text, (r.prob * 100).roundToInt(), r.ranked, fill))
             }
             if (a.rankedReplies.isEmpty()) {
                 val msg = replyError?.let { "回复接口出错：$it" } ?: "（未生成候选回复）"
@@ -455,7 +474,13 @@ class OverlayController(private val ctx: Context) {
         return row
     }
 
-    private fun replyCard(rank: Int, text: String, pct: Int, onFill: (String) -> Unit): View {
+    private fun replyCard(
+        rank: Int,
+        text: String,
+        pct: Int,
+        ranked: Boolean,
+        onFill: (String) -> Unit
+    ): View {
         val top = rank == 1
         val cardBg = if (top) Color.parseColor("#EAF1FF") else Color.parseColor("#F3F4F6")
         val c = LinearLayout(ctx).apply {
@@ -467,7 +492,8 @@ class OverlayController(private val ctx: Context) {
             ).apply { topMargin = dp(6) }
         }
         c.addView(TextView(ctx).apply {
-            this.text = "#$rank · ${pct}%"; setTextColor(Color.parseColor("#3A7AFE")); textSize = 11f
+            this.text = if (ranked) "#$rank · ${pct}%" else "#$rank"
+            setTextColor(Color.parseColor("#3A7AFE")); textSize = 11f
             setTypeface(typeface, Typeface.BOLD)
         })
         c.addView(TextView(ctx).apply {

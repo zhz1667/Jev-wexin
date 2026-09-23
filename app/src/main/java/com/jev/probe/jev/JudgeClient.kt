@@ -125,7 +125,7 @@ class JudgeClient(private val prefs: Prefs) {
         val keys = listOf("reply_a", "reply_b", "reply_c")
         val probs = o?.optJSONObject("probabilities")
         val list = candidates.mapIndexed { i, text ->
-            RankedReply(text, probs?.optDouble(keys.getOrElse(i) { "" }, 0.0) ?: 0.0)
+            RankedReply(text, probs?.optDouble(keys.getOrElse(i) { "" }, 0.0) ?: 0.0, ranked = true)
         }
         return list.sortedByDescending { it.prob }
     }
