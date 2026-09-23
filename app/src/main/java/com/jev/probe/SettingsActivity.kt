@@ -78,11 +78,12 @@ class SettingsActivity : AppCompatActivity() {
         val judgeModelEdit = edit(prefs.judgeModel, Prefs.DEFAULT_JUDGE_MODEL_OPENROUTER)
         judgeProviderIdx = when (prefs.judgeProvider) {
             Prefs.PROVIDER_TYPESAFE -> 1
-            Prefs.PROVIDER_CUSTOM -> 2
+            Prefs.PROVIDER_OPENCODE -> 2
+            Prefs.PROVIDER_CUSTOM -> 3
             else -> 0
         }
         judgeCard.addView(pills(
-            listOf("OpenRouter", "TypeSafe 直连", "自定义"), judgeProviderIdx) { idx ->
+            listOf("OpenRouter", "TypeSafe 直连", "OpenCode Zen", "自定义"), judgeProviderIdx) { idx ->
             judgeProviderIdx = idx
             when (idx) {
                 0 -> {
@@ -93,18 +94,24 @@ class SettingsActivity : AppCompatActivity() {
                     judgeBaseEdit.setText(Prefs.DEFAULT_JUDGE_BASE_TYPESAFE)
                     judgeModelEdit.setText(Prefs.DEFAULT_JUDGE_MODEL_TYPESAFE)
                 }
+                2 -> {
+                    judgeBaseEdit.setText(Prefs.DEFAULT_JUDGE_BASE_OPENCODE)
+                    judgeModelEdit.setText(Prefs.DEFAULT_JUDGE_MODEL_OPENCODE)
+                }
                 // Custom POSTs the box verbatim, so a preset HOST left in the box
                 // would hit the API root. Expand it into the full endpoint the
                 // preset would have used; anything hand-typed is left alone.
-                2 -> judgeBaseEdit.setText(expandJudgeUrl(judgeBaseEdit.text.toString()))
+                3 -> judgeBaseEdit.setText(expandJudgeUrl(judgeBaseEdit.text.toString()))
             }
         })
         judgeCard.addView(label("Base URL"))
         judgeCard.addView(judgeBaseEdit)
-        judgeCard.addView(text("OpenRouter 拼 /alpha/decisions；TypeSafe 拼 /v1/systemone；自定义按原样 POST。",
+        judgeCard.addView(text("OpenRouter 拼 /alpha/decisions；TypeSafe 拼 /v1/systemone；OpenCode Zen 拼 /systemone；自定义按原样 POST。",
+            11f, sub))
+        judgeCard.addView(text("DeepSeek 官方只提供聊天接口，不提供 Jev 判断；判断可选 OpenCode Zen 的 jev-1.13-free。",
             11f, sub))
         judgeCard.addView(label("密钥"))
-        judgeCard.addView(edit(prefs.judgeKey, "sk-...", password = true).also { judgeKeyEdit = it })
+        judgeCard.addView(edit(prefs.judgeKey, "API Key", password = true).also { judgeKeyEdit = it })
         judgeCard.addView(label("模型"))
         judgeCard.addView(judgeModelEdit)
         val judgeResult = resultText()
@@ -157,15 +164,17 @@ class SettingsActivity : AppCompatActivity() {
         val replyIdx = when (prefs.replyBaseUrl.trim().trimEnd('/')) {
             Prefs.DEFAULT_REPLY_BASE -> 0
             Prefs.DEEPSEEK_BASE -> 1
-            Prefs.DASHSCOPE_BASE -> 2
-            else -> 3
+            Prefs.OPENCODE_GO_BASE -> 2
+            Prefs.DASHSCOPE_BASE -> 3
+            else -> 4
         }
         replyCard.addView(pills(
-            listOf("OpenRouter", "DeepSeek 官方", "通义兼容", "自定义"), replyIdx) { idx ->
+            listOf("OpenRouter", "DeepSeek 官方", "OpenCode Go", "通义兼容", "自定义"), replyIdx) { idx ->
             when (idx) {
                 0 -> { replyBaseEdit.setText(Prefs.DEFAULT_REPLY_BASE); replyModelEdit.setText(Prefs.DEFAULT_REPLY_MODEL) }
                 1 -> { replyBaseEdit.setText(Prefs.DEEPSEEK_BASE); replyModelEdit.setText(Prefs.DEEPSEEK_MODEL) }
-                2 -> { replyBaseEdit.setText(Prefs.DASHSCOPE_BASE); replyModelEdit.setText(Prefs.DASHSCOPE_MODEL) }
+                2 -> { replyBaseEdit.setText(Prefs.OPENCODE_GO_BASE); replyModelEdit.setText(Prefs.OPENCODE_GO_MODEL) }
+                3 -> { replyBaseEdit.setText(Prefs.DASHSCOPE_BASE); replyModelEdit.setText(Prefs.DASHSCOPE_MODEL) }
             }
         })
         replyCard.addView(label("Base URL"))
@@ -211,14 +220,16 @@ class SettingsActivity : AppCompatActivity() {
         val visionModelEdit = edit(prefs.visionModel, Prefs.DEFAULT_VISION_MODEL)
         val visionIdx = when (prefs.visionBaseUrl.trim().trimEnd('/')) {
             Prefs.DEFAULT_VISION_BASE -> 0
-            Prefs.DASHSCOPE_BASE -> 1
-            else -> 2
+            Prefs.OPENCODE_GO_BASE -> 1
+            Prefs.DASHSCOPE_BASE -> 2
+            else -> 3
         }
         visionCard.addView(pills(
-            listOf("OpenRouter", "通义兼容", "自定义"), visionIdx) { idx ->
+            listOf("OpenRouter", "OpenCode Go", "通义兼容", "自定义"), visionIdx) { idx ->
             when (idx) {
                 0 -> { visionBaseEdit.setText(Prefs.DEFAULT_VISION_BASE); visionModelEdit.setText(Prefs.DEFAULT_VISION_MODEL) }
-                1 -> { visionBaseEdit.setText(Prefs.DASHSCOPE_BASE); visionModelEdit.setText(Prefs.DASHSCOPE_VISION_MODEL) }
+                1 -> { visionBaseEdit.setText(Prefs.OPENCODE_GO_BASE); visionModelEdit.setText(Prefs.OPENCODE_GO_VISION_MODEL) }
+                2 -> { visionBaseEdit.setText(Prefs.DASHSCOPE_BASE); visionModelEdit.setText(Prefs.DASHSCOPE_VISION_MODEL) }
             }
         })
         visionCard.addView(label("Base URL"))
@@ -263,9 +274,11 @@ class SettingsActivity : AppCompatActivity() {
         // =================== 分析 ===================
         root.addView(section("分析"))
         val card2 = card()
-        card2.addView(label("关系描述（给 Jev 判断用）"))
+        card2.addView(label("默认关系（只在当前会话未匹配到联系人时使用）"))
         val relEdit = edit(prefs.relationship, Prefs.DEFAULT_REL)
         card2.addView(relEdit)
+        card2.addView(text("联系人自己的「关系」优先；在「知识库与联系人」里编辑对应联系人。",
+            11f, sub))
         card2.addView(label("会话白名单（每行一个关键词，空=所有会话）"))
         val wlEdit = edit(prefs.whitelist.joinToString("\n"), "留空则对所有会话生效").apply {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE; minLines = 2
@@ -396,7 +409,8 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun providerOf(idx: Int) = when (idx) {
         1 -> Prefs.PROVIDER_TYPESAFE
-        2 -> Prefs.PROVIDER_CUSTOM
+        2 -> Prefs.PROVIDER_OPENCODE
+        3 -> Prefs.PROVIDER_CUSTOM
         else -> Prefs.PROVIDER_OPENROUTER
     }
 
@@ -410,6 +424,7 @@ class SettingsActivity : AppCompatActivity() {
         when (base.trim().trimEnd('/')) {
             Prefs.DEFAULT_JUDGE_BASE_OPENROUTER -> Prefs.PROVIDER_OPENROUTER
             Prefs.DEFAULT_JUDGE_BASE_TYPESAFE -> Prefs.PROVIDER_TYPESAFE
+            Prefs.DEFAULT_JUDGE_BASE_OPENCODE -> Prefs.PROVIDER_OPENCODE
             else -> providerOf(idx)
         }
 
@@ -417,16 +432,23 @@ class SettingsActivity : AppCompatActivity() {
     private fun expandJudgeUrl(base: String): String = when (base.trim().trimEnd('/')) {
         Prefs.DEFAULT_JUDGE_BASE_OPENROUTER -> Prefs.DEFAULT_JUDGE_BASE_OPENROUTER + "/alpha/decisions"
         Prefs.DEFAULT_JUDGE_BASE_TYPESAFE -> Prefs.DEFAULT_JUDGE_BASE_TYPESAFE + "/v1/systemone"
+        Prefs.DEFAULT_JUDGE_BASE_OPENCODE -> Prefs.DEFAULT_JUDGE_BASE_OPENCODE + "/systemone"
         else -> base.trim()
     }
 
     private fun defaultJudgeBase(provider: String): String =
-        if (provider == Prefs.PROVIDER_TYPESAFE) Prefs.DEFAULT_JUDGE_BASE_TYPESAFE
-        else Prefs.DEFAULT_JUDGE_BASE_OPENROUTER
+        when (provider) {
+            Prefs.PROVIDER_TYPESAFE -> Prefs.DEFAULT_JUDGE_BASE_TYPESAFE
+            Prefs.PROVIDER_OPENCODE -> Prefs.DEFAULT_JUDGE_BASE_OPENCODE
+            else -> Prefs.DEFAULT_JUDGE_BASE_OPENROUTER
+        }
 
     private fun defaultJudgeModel(provider: String): String =
-        if (provider == Prefs.PROVIDER_TYPESAFE) Prefs.DEFAULT_JUDGE_MODEL_TYPESAFE
-        else Prefs.DEFAULT_JUDGE_MODEL_OPENROUTER
+        when (provider) {
+            Prefs.PROVIDER_TYPESAFE -> Prefs.DEFAULT_JUDGE_MODEL_TYPESAFE
+            Prefs.PROVIDER_OPENCODE -> Prefs.DEFAULT_JUDGE_MODEL_OPENCODE
+            else -> Prefs.DEFAULT_JUDGE_MODEL_OPENROUTER
+        }
 
     /**
      * A throwaway [Prefs] view carrying exactly what is in the boxes right now,

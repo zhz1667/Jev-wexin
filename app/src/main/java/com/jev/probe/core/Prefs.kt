@@ -2,6 +2,7 @@ package com.jev.probe.core
 
 import android.content.Context
 import android.util.Log
+import java.security.SecureRandom
 
 /**
  * App-private config store. Holds the three API routes (judge / reply / vision),
@@ -42,7 +43,7 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
 
     // ---------------------------------------------------------------- judge
 
-    /** "openrouter" | "typesafe" | "custom". */
+    /** "openrouter" | "typesafe" | "opencode" | "custom". */
     var judgeProvider: String
         get() = sp.getString(K_JUDGE_PROVIDER, PROVIDER_OPENROUTER) ?: PROVIDER_OPENROUTER
         set(v) = sp.edit().putString(K_JUDGE_PROVIDER, v.trim()).apply()
@@ -59,6 +60,27 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
     var judgeModel: String
         get() = sp.getString(K_JUDGE_MODEL, DEFAULT_JUDGE_MODEL_OPENROUTER) ?: DEFAULT_JUDGE_MODEL_OPENROUTER
         set(v) = sp.edit().putString(K_JUDGE_MODEL, v.trim()).apply()
+
+    /**
+     * Stable 8-character alphanumeric OpenCode session id. OpenCode's Go and
+     * Zen endpoints use it for session affinity and request correlation.
+     */
+    var openCodeSessionId: String
+        get() {
+            val existing = sp.getString(K_OPENCODE_SESSION, "") ?: ""
+            if (existing.isNotBlank()) return existing
+            return synchronized(openCodeSessionLock) {
+                val recheck = sp.getString(K_OPENCODE_SESSION, "") ?: ""
+                if (recheck.isNotBlank()) {
+                    recheck
+                } else {
+                    val generated = newOpenCodeSessionId()
+                    sp.edit().putString(K_OPENCODE_SESSION, generated).apply()
+                    generated
+                }
+            }
+        }
+        set(v) = sp.edit().putString(K_OPENCODE_SESSION, v.trim()).apply()
 
     /** Back-compat alias so older call sites keep compiling. */
     var openRouterKey: String
@@ -198,6 +220,7 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         val base = judgeBaseUrl.trim().trimEnd('/')
         return when (judgeProvider) {
             PROVIDER_TYPESAFE -> "$base/v1/systemone"
+            PROVIDER_OPENCODE -> "$base/systemone"
             PROVIDER_CUSTOM -> judgeBaseUrl.trim()   // user supplies the full URL
             else -> "$base/alpha/decisions"
         }
@@ -234,6 +257,7 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         private const val K_JUDGE_BASE = "judge_base_url"
         private const val K_JUDGE_KEY = "judge_key"
         private const val K_JUDGE_MODEL = "judge_model"
+        private const val K_OPENCODE_SESSION = "opencode_session_id"
         private const val K_REPLY_BASE = "reply_base_url"
         private const val K_REPLY_KEY = "reply_key"
         private const val K_REPLY_MODEL = "reply_model"
@@ -257,6 +281,7 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
 
         const val PROVIDER_OPENROUTER = "openrouter"
         const val PROVIDER_TYPESAFE = "typesafe"
+        const val PROVIDER_OPENCODE = "opencode"
         const val PROVIDER_CUSTOM = "custom"
 
         const val OCR_MLKIT = "mlkit"
@@ -267,20 +292,38 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         const val DEFAULT_JUDGE_MODEL_OPENROUTER = "typesafe/jev-1.13"
         const val DEFAULT_JUDGE_BASE_TYPESAFE = "https://api.typesafe.ai"
         const val DEFAULT_JUDGE_MODEL_TYPESAFE = "jev-latest"
+        // OpenCode Go's /systemone upstream was unavailable during verification,
+        // so judgment uses the same account's Zen endpoint with jev-1.13-free.
+        const val DEFAULT_JUDGE_BASE_OPENCODE = "https://opencode.ai/zen/v1"
+        const val DEFAULT_JUDGE_MODEL_OPENCODE = "jev-1.13-free"
 
         // Reply route presets (OpenAI-compatible chat completions).
         const val DEFAULT_REPLY_BASE = "https://openrouter.ai/api/v1"
         const val DEFAULT_REPLY_MODEL = "deepseek/deepseek-chat-v3.1"
         const val DEEPSEEK_BASE = "https://api.deepseek.com/v1"
         const val DEEPSEEK_MODEL = "deepseek-chat"
+        const val OPENCODE_GO_BASE = "https://opencode.ai/zen/go/v1"
+        const val OPENCODE_GO_MODEL = "deepseek-v4.1-flash"
         const val DASHSCOPE_BASE = "https://dashscope.aliyuncs.com/compatible-mode/v1"
         const val DASHSCOPE_MODEL = "qwen-plus"
 
         // Vision route preset (OpenRouter region-available; user may change).
         const val DEFAULT_VISION_BASE = "https://openrouter.ai/api/v1"
         const val DEFAULT_VISION_MODEL = "qwen/qwen2.5-vl-72b-instruct"
+        const val OPENCODE_GO_VISION_MODEL = "deepseek-v4-flash-vision-exp"
         const val DASHSCOPE_VISION_MODEL = "qwen-vl-max"
 
         const val DEFAULT_REL = "对方是我的伴侣；from=me 的是我发的，from=other 的是对方发的"
+
+        private const val OPENCODE_SESSION_ALPHABET =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+        private val openCodeSessionLock = Any()
+        private val openCodeSessionRandom = SecureRandom()
+
+        private fun newOpenCodeSessionId(): String = buildString(8) {
+            repeat(8) {
+                append(OPENCODE_SESSION_ALPHABET[openCodeSessionRandom.nextInt(OPENCODE_SESSION_ALPHABET.length)])
+            }
+        }
     }
 }

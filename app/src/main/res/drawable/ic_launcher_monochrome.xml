@@ -1,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Single-color owl silhouette with transparent eyes and book. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M54,22 C48,22 43,24 39,28 L25,20 L29,38 C27,44 27,51 29,57 C32,68 42,75 54,78 C66,75 76,68 79,57 C81,51 81,44 79,38 L83,20 L69,28 C65,24 60,22 54,22 Z M44,51 m-8,0 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0 Z M64,51 m-8,0 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0 Z M40,76 H68 V83 H40 Z" />
+</vector>

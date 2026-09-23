@@ -76,7 +76,7 @@ class JudgeClient(private val prefs: Prefs) {
         ctx: ChatContext?,
         questions: JSONObject
     ): JSONObject {
-        val background = ctx?.background(relationship) ?: ""
+        val background = ctx?.background() ?: ""
         val history = ctx?.history ?: emptyList()
         val enriched = background.isNotBlank() || history.isNotEmpty()
         return try {
@@ -95,7 +95,13 @@ class JudgeClient(private val prefs: Prefs) {
             .put("model", prefs.judgeModel)
             .put("state", state)
             .put("questions", questions)
-        val resp = HttpJson.post(url, prefs.judgeKey, body, Route.JUDGE, HttpJson.headersFor(url))
+        val resp = HttpJson.post(
+            url,
+            prefs.judgeKey,
+            body,
+            Route.JUDGE,
+            HttpJson.headersFor(url, prefs.openCodeSessionId)
+        )
         return resp.optJSONObject("answers") ?: JSONObject()
     }
 

@@ -227,7 +227,7 @@ class KnowledgeActivity : AppCompatActivity() {
             return
         }
         contacts.forEach { container.addView(contactRow(it)) }
-        container.addView(text("点条目编辑，长按删除。会话标题等于名字或任一别名即算命中（忽略大小写与群人数后缀）。",
+        container.addView(text("点条目编辑，长按删除。会话标题等于名字或任一别名即算命中（忽略大小写与群人数后缀）。这里填的「关系」优先于设置里的默认关系。",
             11f, sub).apply { setPadding(dp(2), dp(12), 0, 0) })
     }
 
@@ -277,7 +277,7 @@ class KnowledgeActivity : AppCompatActivity() {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
             minLines = 3; gravity = Gravity.TOP
         }
-        val relEdit = edit(existing?.relationship ?: "", "例如：同事，带我做项目的组长")
+        val relEdit = edit(existing?.relationship ?: "", "例如：同事，带我做项目的组长（优先于默认关系）")
         val notesEdit = edit(existing?.notes ?: "", "关于这个人要记住的事").apply {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
             minLines = 3; gravity = Gravity.TOP

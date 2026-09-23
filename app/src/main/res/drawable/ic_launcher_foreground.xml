@@ -3,12 +3,47 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- White chat bubble (safe zone ~ 30..78) -->
+    <!-- Ear tufts -->
+    <path android:fillColor="#FFF8E7" android:pathData="M37,40 L33,29 L47,34 Z" />
+    <path android:fillColor="#FFF8E7" android:pathData="M71,40 L75,29 L61,34 Z" />
+
+    <!-- Head -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M40,34 h28 a11,11 0 0 1 11,11 v14 a11,11 0 0 1 -11,11 h-16 l-13,11 v-11 h-1 a11,11 0 0 1 -11,-11 v-14 a11,11 0 0 1 11,-11 z" />
-    <!-- Three dots -->
-    <path android:fillColor="#3A7AFE" android:pathData="M46,52 m-3.4,0 a3.4,3.4 0 1 0 6.8,0 a3.4,3.4 0 1 0 -6.8,0" />
-    <path android:fillColor="#3A7AFE" android:pathData="M56,52 m-3.4,0 a3.4,3.4 0 1 0 6.8,0 a3.4,3.4 0 1 0 -6.8,0" />
-    <path android:fillColor="#3A7AFE" android:pathData="M66,52 m-3.4,0 a3.4,3.4 0 1 0 6.8,0 a3.4,3.4 0 1 0 -6.8,0" />
+        android:fillColor="#FFF8E7"
+        android:pathData="M54,30 C45,30 37,35 34,43 C31,51 33,61 40,68 C45,72 49,75 54,75 C59,75 63,72 68,68 C75,61 77,51 74,43 C71,35 63,30 54,30 Z" />
+
+    <!-- Face discs -->
+    <path
+        android:fillColor="#DCE8FF"
+        android:strokeColor="#2F6BE6"
+        android:strokeWidth="1.5"
+        android:pathData="M44,51 m-13.5,0 a13.5,13.5 0 1,0 27,0 a13.5,13.5 0 1,0 -27,0" />
+    <path
+        android:fillColor="#DCE8FF"
+        android:strokeColor="#2F6BE6"
+        android:strokeWidth="1.5"
+        android:pathData="M64,51 m-13.5,0 a13.5,13.5 0 1,0 27,0 a13.5,13.5 0 1,0 -27,0" />
+
+    <!-- Eyes -->
+    <path android:fillColor="#173B6C" android:pathData="M44,51 m-6.5,0 a6.5,6.5 0 1,0 13,0 a6.5,6.5 0 1,0 -13,0" />
+    <path android:fillColor="#173B6C" android:pathData="M64,51 m-6.5,0 a6.5,6.5 0 1,0 13,0 a6.5,6.5 0 1,0 -13,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M41.5,48.5 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M61.5,48.5 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0" />
+
+    <!-- Beak -->
+    <path android:fillColor="#FFC857" android:pathData="M54,55 L60,62 L54,68 L48,62 Z" />
+    <path
+        android:strokeColor="#E3A93A"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:pathData="M54,61 L54,66" />
+
+    <!-- Book -->
+    <path
+        android:fillColor="#173B6C"
+        android:pathData="M42,76 H66 C67.1,76 68,76.9 68,78 V81 C68,82.1 67.1,83 66,83 H42 C40.9,83 40,82.1 40,81 V78 C40,76.9 40.9,76 42,76 Z" />
+    <path android:fillColor="#FFF8E7" android:pathData="M43,78 H52 V82 H43 Z" />
+    <path android:fillColor="#FFF8E7" android:pathData="M56,78 H65 V82 H56 Z" />
+    <path android:fillColor="#3A7AFE" android:pathData="M52,76 H56 V83 H52 Z" />
+    <path android:fillColor="#FFC857" android:pathData="M58,76 H60 V81 L59,80 L58,81 Z" />
 </vector>

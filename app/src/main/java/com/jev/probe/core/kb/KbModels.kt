@@ -56,22 +56,21 @@ data class ChatContext(
         (contact == null || (contact.relationship.isBlank() &&
             contact.notes.isBlank() && contact.autoSummary.isBlank()))
 
+    /** Contact-specific relationship wins; the global value is only a fallback. */
+    fun effectiveRelationship(defaultRelationship: String): String {
+        val contactRelationship = contact?.relationship?.trim().orEmpty()
+        return contactRelationship.ifBlank { defaultRelationship.trim() }
+    }
+
     /**
      * The `background` string injected into Jev's state and the reply prompt:
-     * relationship + contact notes + auto-summary + each matched note as
-     * "title: content". Blank when there is nothing to say — callers must then
-     * omit the field entirely rather than send an empty one.
-     *
-     * @param defaultRelationship unused when the contact carries no relationship
-     *        of its own — that global default already goes out separately as
-     *        `chat.relationship`, so repeating it here would just duplicate it.
-     *        A contact with no relationship set simply omits the "关系：" line.
+     * contact notes + auto-summary + each matched note as "title: content".
+     * The effective relationship is carried separately in `chat.relationship`
+     * (judge) and the reply prompt, so it is not repeated here.
      */
-    fun background(defaultRelationship: String): String {
+    fun background(): String {
         val sb = StringBuilder()
         contact?.let { c ->
-            val rel = c.relationship.trim()
-            if (rel.isNotEmpty()) sb.append("关系：").append(rel).append('\n')
             if (c.notes.isNotBlank()) sb.append("关于").append(c.name).append("：")
                 .append(c.notes.trim()).append('\n')
             if (c.autoSummary.isNotBlank()) sb.append("过往摘要：")

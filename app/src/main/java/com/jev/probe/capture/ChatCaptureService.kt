@@ -247,7 +247,7 @@ open class ChatCaptureService : AccessibilityService() {
         analyzing = true
         main.post { overlay?.showLoading(); overlay?.setNote(snapshot.note) }
         val client = JevClient(prefs)
-        val rel = prefs.relationship
+        val fallbackRel = prefs.relationship
         val pkg = activePkg ?: ""
         // Knowledge context first (local file reads only, a few ms), then the two
         // network calls in parallel on the pool. A failure here must never stop
@@ -258,6 +258,7 @@ open class ChatCaptureService : AccessibilityService() {
             } catch (e: Exception) {
                 Log.w(TAG, "context build failed: ${e.javaClass.simpleName}"); null
             }
+            val rel = ctx?.effectiveRelationship(fallbackRel) ?: fallbackRel
             main.post { overlay?.setContextInfo(ctx?.notes?.size ?: 0, ctx?.history?.size ?: 0) }
 
             // Judgment is fast (~1s) — show it immediately.

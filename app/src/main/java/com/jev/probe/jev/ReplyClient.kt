@@ -27,15 +27,15 @@ class ReplyClient(private val prefs: Prefs) {
         val sys = "你是中文即时通讯回复助手。只输出一个 JSON 数组，含且仅含 3 条候选回复文本，" +
             "三条策略要有区别（例如：一条稳妥承接、一条给具体行动或承诺、一条简短低姿态）。" +
             "每条不超过 40 字，口语、自然、像真人在聊天软件里发消息。不要解释，不要加引号以外的内容，直接输出 JSON 数组。"
-        val user = knowledgeBlock(relationship, ctx) +
+        val user = knowledgeBlock(ctx) +
             "关系：$relationship\n\n最近对话：\n$convo\n\n请给出 3 条候选回复。"
         return parseThree(chat(sys, user, temperature = 0.8))
     }
 
     /** The background + history preamble; empty string when there is no context. */
-    private fun knowledgeBlock(relationship: String, ctx: ChatContext?): String {
+    private fun knowledgeBlock(ctx: ChatContext?): String {
         ctx ?: return ""
-        val background = ctx.background(relationship)
+        val background = ctx.background()
         val history = ctx.history
         if (background.isBlank() && history.isEmpty()) return ""
         val sb = StringBuilder()
@@ -78,7 +78,13 @@ class ReplyClient(private val prefs: Prefs) {
             .put("model", prefs.replyModel)
             .put("messages", messages)
             .put("temperature", temperature)
-        val resp = HttpJson.post(url, prefs.effectiveReplyKey(), body, Route.REPLY, HttpJson.headersFor(url))
+        val resp = HttpJson.post(
+            url,
+            prefs.effectiveReplyKey(),
+            body,
+            Route.REPLY,
+            HttpJson.headersFor(url, prefs.openCodeSessionId)
+        )
         return resp.optJSONArray("choices")?.optJSONObject(0)
             ?.optJSONObject("message")?.optString("content") ?: ""
     }

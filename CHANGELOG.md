@@ -2,6 +2,15 @@
 
 格式：每版按 新增 / 改进 / 修复 / 已知限制 / 下载 归类，人话版，不是提交列表。
 
+## 未发布
+
+**新增**
+- 模型接口新增 OpenCode：判断接口可选 OpenCode Zen，使用 `jev-1.13-free` 和 `/systemone`；回复接口可选 OpenCode Go，默认 `deepseek-v4.1-flash`；视觉接口可选 OpenCode Go 的 `deepseek-v4-flash-vision-exp`。
+- 所有 `opencode.ai` 请求自动带 8 位字母数字 Session ID，并写入 `x-opencode-session`、`x-session-affinity`、`x-client-request-id`、`x-session-id` 四个请求头。
+
+**修复**
+- 联系人关系现在优先于设置里的全局关系。分析当前会话时，匹配到联系人就使用该联系人的「关系」，只有未匹配到联系人才使用设置里的「默认关系」。
+
 ## v1.3 — 2026-09-22
 
 **新增**

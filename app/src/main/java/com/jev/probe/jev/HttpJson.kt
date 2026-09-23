@@ -35,7 +35,7 @@ class ApiException(
 }
 
 /**
- * Shared POST-JSON helper: UTF-8 body, exponential backoff on 429/529, no retry
+ * Shared POST-JSON helper: UTF-8 body, exponential backoff on 429/503/529, no retry
  * on other 4xx, and every failure normalized to [ApiException]. Keys are passed
  * in per call and never logged.
  */
@@ -71,7 +71,7 @@ object HttpJson {
                 val bytes = body.toString().toByteArray(Charsets.UTF_8)
                 conn.outputStream.use { os: OutputStream -> os.write(bytes) }
                 val code = conn.responseCode
-                if (code == 429 || code == 529) {
+                if (code == 429 || code == 503 || code == 529) {
                     last = ApiException(route, code, "服务繁忙，已重试")
                     attempt++
                     if (attempt < MAX_ATTEMPTS) Thread.sleep(500L * (1L shl attempt))
@@ -113,11 +113,31 @@ object HttpJson {
         } catch (_: Exception) { "" }
     }
 
-    /** OpenRouter wants attribution headers; other hosts reject unknown ones politely. */
-    fun headersFor(url: String): Map<String, String> =
-        if (url.contains("openrouter.ai", ignoreCase = true))
-            mapOf("HTTP-Referer" to "https://jev-assistant.local", "X-Title" to "Jev Assistant")
-        else emptyMap()
+    /**
+     * OpenRouter wants attribution headers. OpenCode Zen/Go use the same
+     * session id as affinity and request-correlation headers.
+     */
+    fun headersFor(url: String, openCodeSessionId: String = ""): Map<String, String> {
+        val headers = linkedMapOf<String, String>()
+        if (url.contains("openrouter.ai", ignoreCase = true)) {
+            headers["HTTP-Referer"] = "https://jev-assistant.local"
+            headers["X-Title"] = "Jev Assistant"
+        }
+        if (openCodeSessionId.isNotBlank() && isOpenCodeHost(url)) {
+            headers["x-opencode-session"] = openCodeSessionId
+            headers["x-session-affinity"] = openCodeSessionId
+            headers["x-client-request-id"] = openCodeSessionId
+            headers["x-session-id"] = openCodeSessionId
+        }
+        return headers
+    }
+
+    private fun isOpenCodeHost(url: String): Boolean = try {
+        val host = URL(url).host.lowercase()
+        host == "opencode.ai" || host.endsWith(".opencode.ai")
+    } catch (_: Exception) {
+        false
+    }
 
     /** Human-readable transport failures (no key material ever appears here). */
     private fun describe(e: Exception): String {
